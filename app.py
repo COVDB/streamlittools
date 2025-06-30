@@ -18,7 +18,7 @@ st.title("Gereedschappenbeheer (offline)")
 
 # Upload CSV/XLSX met kolommen FotoURL, CS CODE, Description, optioneel Base64
 uploaded_file = st.file_uploader(
-    "Upload Excel- of CSV-export (met kolommen FotoURL, CS CODE, Description, Base64)",
+    "Upload Excel- of CSV-export (met kolommen FotoURL, CS CODE, Description, Base64 picture)",
     type=["xlsx", "csv"]
 )
 
@@ -37,7 +37,7 @@ if uploaded_file:
     for col in ["FotoURL", "CS CODE", "DISCRIPTION", "Base64 picture"]:
         if col not in df.columns:
             df[col] = ""
-    df = df[["FotoURL", "CS CODE", "DISCRIPTION", "Base64"]]
+    df = df[["FotoURL", "CS CODE", "DISCRIPTION", "Base64 picture"]]
 
     st.subheader("Gereedschappenoverzicht (wijzigbaar)")
     # Data editor voor handmatige bewerking en rijen toevoegen
