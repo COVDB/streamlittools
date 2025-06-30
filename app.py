@@ -2,6 +2,11 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from fpdf import FPDF
+import os
+
+# === Constants ===
+# Zorg dat het lettertypebestand "DejaVuSans.ttf" in de repo staat (bijv. in map "fonts/").
+FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "DejaVuSans.ttf)
 
 # === Streamlit App ===
 st.title("Gereedschappenbeheer (offline)")
@@ -28,30 +33,39 @@ if uploaded_file:
     st.dataframe(df)
 
     # Functie voor PDF-generatie
-    def create_pdf(df: pd.DataFrame) -> bytes:
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
+def create_pdf(df: pd.DataFrame) -> bytes:
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    # Unicode font registreren
+    if os.path.isfile(FONT_PATH):
+        pdf.add_font("DejaVu", "", FONT_PATH, uni=True)
+        pdf.set_font("DejaVu", size=12)
+    else:
+        # Fallback naar standaard font
         pdf.set_font("Arial", size=12)
 
-        # Titel
-        pdf.cell(0, 10, txt="Gereedschappenoverzicht", ln=True, align='C')
-        pdf.ln(5)
+    # Titel
+    pdf.cell(0, 10, txt="Gereedschappenoverzicht", ln=True, align="C")
+    pdf.ln(5)
 
-        # Header
+    # Header
+    for col in df.columns:
+        pdf.cell(60, 10, str(col), border=1)
+    pdf.ln()
+
+    # Rijen
+    for _, row in df.iterrows():
         for col in df.columns:
-            pdf.cell(60, 10, str(col), border=1)
+            text = str(row[col])
+            # Zorg dat lange teksten worden afgebroken
+            pdf.multi_cell(60, 10, text, border=1)
         pdf.ln()
 
-        # Rijen
-        for _, row in df.iterrows():
-            for col in df.columns:
-                pdf.cell(60, 10, str(row[col]), border=1)
-            pdf.ln()
-
-        buffer = BytesIO()
-        pdf.output(buffer)
-        return buffer.getvalue()
+    buffer = BytesIO()
+    pdf.output(buffer)
+    return buffer.getvalue()
 
     # PDF Download
     if st.button("Genereer PDF"):
