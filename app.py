@@ -97,7 +97,7 @@ def create_pdf(df: pd.DataFrame) -> bytes:
 
         # Description
         pdf.set_xy(x0 + IMAGE_WIDTH + CODE_WIDTH, y0)
-        pdf.multi_cell(DESC_WIDTH, 6, str(row['Description']), border=1)
+        pdf.multi_cell(DESC_WIDTH, 6, str(row['DISCRIPTION']), border=1)
 
         # Move to next row
         bottom = max(pdf.get_y(), y0 + IMAGE_HEIGHT)
