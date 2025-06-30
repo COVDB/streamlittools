@@ -38,7 +38,7 @@ if uploaded_file:
     st.subheader("Gereedschappenoverzicht")
     st.dataframe(df)
 
-    # PDF-generator
+    # Functie voor PDF-generatie
 def create_pdf(df: pd.DataFrame) -> bytes:
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -60,15 +60,15 @@ def create_pdf(df: pd.DataFrame) -> bytes:
 
     # Rows
     for _, row in df.iterrows():
-        # Image
-        img_data = row.get("Image", "")
         x_before = pdf.get_x()
         y_before = pdf.get_y()
+
+        # Image
+        img_data = row.get("Image", "")
         if img_data:
             try:
-                # base64 string zonder prefix 'data:image/...;base64,'
-                b = img_data.split(',')[-1]
-                img_bytes = base64.b64decode(b)
+                b64 = img_data.split(',')[-1]
+                img_bytes = base64.b64decode(b64)
                 img_buf = BytesIO(img_bytes)
                 pdf.image(img_buf, x=x_before, y=y_before, w=IMAGE_WIDTH)
             except Exception:
@@ -77,21 +77,30 @@ def create_pdf(df: pd.DataFrame) -> bytes:
             pdf.cell(IMAGE_WIDTH, 30, "", border=1)
 
         # CS CODE
-        pdf.set_xy(x_before+IMAGE_WIDTH, y_before)
+        pdf.set_xy(x_before + IMAGE_WIDTH, y_before)
         pdf.multi_cell(CODE_WIDTH, 10, str(row.get("CS CODE", "")), border=1)
 
         # Description
-        pdf.set_xy(x_before+IMAGE_WIDTH+CODE_WIDTH, y_before)
+        pdf.set_xy(x_before + IMAGE_WIDTH + CODE_WIDTH, y_before)
         pdf.multi_cell(DESC_WIDTH, 10, str(row.get("Description", "")), border=1)
 
-        # move to next line (max height of the row)
-        pdf.ln(0)
+        # Move cursor to end of row
+        new_y = pdf.get_y()
+        pdf.set_xy(MARGIN, new_y)
 
-    return pdf.output(dest='S')
+    # Output PDF
+    pdf_str = pdf.output(dest='S')
+    return pdf_str if isinstance(pdf_str, (bytes, bytearray)) else pdf_str.encode('latin-1')
 
-    # PDF Download
-af if uploaded_file and st.button("Genereer PDF"):
+    # Download knop
+if uploaded_file and st.button("Genereer PDF"):
     pdf_bytes = create_pdf(df)
-    st.download_button("Download PDF", data=pdf_bytes, file_name="gereedschappen.pdf", mime="application/pdf")
+    st.download_button(
+        label="Download PDF",
+        data=pdf_bytes,
+        file_name="gereedschappen.pdf",
+        mime="application/pdf"
+    )
 else:
-    st.info("Upload eerst je geëxporteerde lijst om verder te gaan.")
+    if not uploaded_file:
+        st.info("Upload eerst je geëxporteerde lijst om verder te gaan.")
