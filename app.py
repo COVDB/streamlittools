@@ -38,7 +38,7 @@ if uploaded_file:
         if col not in df.columns:
             df[col] = ""
 
-    df = df[["CS CODE", "Description"]]
+    df = df[["CS CODE", "DISCRIPTION"]]
     df.reset_index(drop=True, inplace=True)
 
     st.subheader("Gereedschappenoverzicht (handmatige upload afbeeldingen)")
