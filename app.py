@@ -6,7 +6,7 @@ import os
 
 # === Constants ===
 # Zorg dat het lettertypebestand "DejaVuSans.ttf" in de repo staat (bijv. in map "fonts/").
-FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "DejaVuSans.ttf)
+FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "DejaVuSans.ttf")
 
 # === Streamlit App ===
 st.title("Gereedschappenbeheer (offline)")
@@ -67,14 +67,15 @@ def create_pdf(df: pd.DataFrame) -> bytes:
     pdf.output(buffer)
     return buffer.getvalue()
 
-    # PDF Download
-    if st.button("Genereer PDF"):
-        pdf_bytes = create_pdf(df)
-        st.download_button(
-            label="Download PDF",
-            data=pdf_bytes,
-            file_name="gereedschappen.pdf",
-            mime="application/pdf"
-        )
+    # PDF Download sectie
+if uploaded_file and st.button("Genereer PDF"):
+    pdf_bytes = create_pdf(df)
+    st.download_button(
+        label="Download PDF",
+        data=pdf_bytes,
+        file_name="gereedschappen.pdf",
+        mime="application/pdf"
+    )
 else:
-    st.info("Upload eerst je geëxporteerde lijst om verder te gaan.")
+    if not uploaded_file:
+        st.info("Upload eerst je geëxporteerde lijst om verder te gaan.")
