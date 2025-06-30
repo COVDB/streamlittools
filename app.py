@@ -32,7 +32,7 @@ if uploaded_file:
     st.subheader("Ingelezen Gereedschappen")
     st.dataframe(df)
 
-    # Functie voor PDF-generatie
+# Functie voor PDF-generatie
 def create_pdf(df: pd.DataFrame) -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -43,7 +43,6 @@ def create_pdf(df: pd.DataFrame) -> bytes:
         pdf.add_font("DejaVu", "", FONT_PATH, uni=True)
         pdf.set_font("DejaVu", size=12)
     else:
-        # Fallback naar standaard font
         pdf.set_font("Arial", size=12)
 
     # Titel
@@ -59,15 +58,15 @@ def create_pdf(df: pd.DataFrame) -> bytes:
     for _, row in df.iterrows():
         for col in df.columns:
             text = str(row[col])
-            # Zorg dat lange teksten worden afgebroken
             pdf.multi_cell(60, 10, text, border=1)
         pdf.ln()
 
-    buffer = BytesIO()
-    pdf.output(buffer)
-    return buffer.getvalue()
+    # Genereer PDF als string
+    pdf_str = pdf.output(dest='S')
+    # PDF_output is bytes in FPDF2 when dest='S'
+    return pdf_str if isinstance(pdf_str, (bytes, bytearray)) else pdf_str.encode('latin-1')
 
-    # PDF Download sectie
+# PDF Download sectie
 if uploaded_file and st.button("Genereer PDF"):
     pdf_bytes = create_pdf(df)
     st.download_button(
