@@ -34,17 +34,17 @@ if uploaded_file:
         st.error(f"Fout bij inlezen bestand: {e}")
         st.stop()
 
-    # Alleen relevante kolommen, voeg Base64 kolom toe als die ontbreekt
-    for col in ["FotoURL", "CS CODE", "DISCRIPTION", "Base64 picture"]:
+    # Alleen relevante kolommen, voeg kolommen toe als ze ontbreken
+    for col in ["FotoURL", "CS CODE", "DISCRIPTION", "Base64"]:
         if col not in df.columns:
             df[col] = ""
-    df = df[["FotoURL", "CS CODE", "DISCRIPTION", "Base64 picture"]]
+    df = df[["FotoURL", "CS CODE", "DISCRIPTION", "Base64"]]
 
     st.subheader("Gereedschappenoverzicht (wijzigbaar)")
     # Data editor voor handmatige bewerking en rijen toevoegen
     df = st.data_editor(df, num_rows="dynamic")
 
-    # PDF-generator
+    # PDF-generator functie
 def create_pdf(df: pd.DataFrame) -> bytes:
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -69,21 +69,25 @@ def create_pdf(df: pd.DataFrame) -> bytes:
         x_before = pdf.get_x()
         y_before = pdf.get_y()
 
+        # Haal velden op via .get
+        b64 = row.get("Base64", "") or ""
+        url = row.get("FotoURL", "") or ""
+        code = row.get("CS CODE", "")
+        desc = row.get("DISCRIPTION", "")
+
         # Kies Base64 boven FotoURL als beschikbaar
-        if row["Base64"]:
+        if b64:
             try:
-                b64 = row["Base64"].split(',')[-1]
-                img_bytes = base64.b64decode(b64)
-                img_buf = BytesIO(img_bytes)
-                pdf.image(img_buf, x=x_before, y=y_before, w=IMAGE_WIDTH)
+                data = b64.split(",")[-1]
+                img_bytes = base64.b64decode(data)
+                pdf.image(BytesIO(img_bytes), x=x_before, y=y_before, w=IMAGE_WIDTH)
             except Exception:
                 pdf.cell(IMAGE_WIDTH, 30, "[Invalid Base64]", border=1)
-        elif isinstance(row["FotoURL"], str) and row["FotoURL"].startswith("http"):
+        elif isinstance(url, str) and url.startswith("http"):
             try:
-                resp = requests.get(row["FotoURL"])
+                resp = requests.get(url)
                 resp.raise_for_status()
-                img_buf = BytesIO(resp.content)
-                pdf.image(img_buf, x=x_before, y=y_before, w=IMAGE_WIDTH)
+                pdf.image(BytesIO(resp.content), x=x_before, y=y_before, w=IMAGE_WIDTH)
             except Exception:
                 pdf.cell(IMAGE_WIDTH, 30, "[Foto laad fout]", border=1)
         else:
@@ -91,21 +95,21 @@ def create_pdf(df: pd.DataFrame) -> bytes:
 
         # CS CODE
         pdf.set_xy(x_before + IMAGE_WIDTH, y_before)
-        pdf.multi_cell(CODE_WIDTH, 10, str(row["CS CODE"]), border=1)
+        pdf.multi_cell(CODE_WIDTH, 10, str(code), border=1)
 
         # Description
         pdf.set_xy(x_before + IMAGE_WIDTH + CODE_WIDTH, y_before)
-        pdf.multi_cell(DESC_WIDTH, 10, str(row["Description"]), border=1)
+        pdf.multi_cell(DESC_WIDTH, 10, str(desc), border=1)
 
-        # Nieuwe cursorpositie
+        # Cursor naar volgende rij
         new_y = pdf.get_y()
         pdf.set_xy(MARGIN, new_y)
 
-    # Output PDF
-    pdf_str = pdf.output(dest='S')
-    return pdf_str if isinstance(pdf_str, (bytes, bytearray)) else pdf_str.encode('latin-1')
+    # Output
+    out = pdf.output(dest='S')
+    return out if isinstance(out, (bytes, bytearray)) else out.encode('latin-1')
 
-# Download knop
+    # Download knop
 if uploaded_file and st.button("Genereer PDF"):
     pdf_bytes = create_pdf(df)
     st.download_button(
