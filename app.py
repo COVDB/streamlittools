@@ -32,7 +32,7 @@ if uploaded_file:
         st.stop()
 
     # Enkel relevante kolommen
-    cols = [c for c in ["Image", "CS CODE", "Description"] if c in df.columns]
+    cols = [c for c in ["Base64 picture", "CS CODE", "DISCRIPTION"] if c in df.columns]
     df = df[cols]
 
     st.subheader("Gereedschappenoverzicht")
@@ -64,7 +64,7 @@ def create_pdf(df: pd.DataFrame) -> bytes:
         y_before = pdf.get_y()
 
         # Image
-        img_data = row.get("Image", "")
+        img_data = row.get("Base64 picture", "")
         if img_data:
             try:
                 b64 = img_data.split(',')[-1]
@@ -82,7 +82,7 @@ def create_pdf(df: pd.DataFrame) -> bytes:
 
         # Description
         pdf.set_xy(x_before + IMAGE_WIDTH + CODE_WIDTH, y_before)
-        pdf.multi_cell(DESC_WIDTH, 10, str(row.get("Description", "")), border=1)
+        pdf.multi_cell(DESC_WIDTH, 10, str(row.get("DISCRIPTION", "")), border=1)
 
         # Move cursor to end of row
         new_y = pdf.get_y()
