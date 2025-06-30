@@ -10,9 +10,11 @@ import requests
 FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "DejaVuSans.ttf")
 PAGE_WIDTH = 210  # A4 width in mm
 MARGIN = 10
-IMAGE_WIDTH = 40  # mm
+IMAGE_WIDTH = 40  # mm (square image)
+IMAGE_HEIGHT = 30  # mm
 CODE_WIDTH = 30   # mm
 DESC_WIDTH = PAGE_WIDTH - 2*MARGIN - IMAGE_WIDTH - CODE_WIDTH - 2
+ROW_SPACING = 2   # mm extra spacing after each row
 
 # === Streamlit App ===
 st.title("Gereedschappenbeheer (offline)")
@@ -34,14 +36,13 @@ if uploaded_file:
         st.error(f"Fout bij inlezen bestand: {e}")
         st.stop()
 
-    # Alleen relevante kolommen, voeg kolommen toe als ze ontbreken
-    for col in ["FotoURL", "CS CODE", "DISCRIPTION", "Base64"]:
+    # Alleen relevante kolommen
+    for col in ["FotoURL", "CS CODE", "DISCRIPTION", "Base64 picture"]:
         if col not in df.columns:
             df[col] = ""
-    df = df[["FotoURL", "CS CODE", "DISCRIPTION", "Base64"]]
+    df = df[["FotoURL", "CS CODE", "DISCRIPTION", "Base64 picture"]]
 
     st.subheader("Gereedschappenoverzicht (wijzigbaar)")
-    # Data editor voor handmatige bewerking en rijen toevoegen
     df = st.data_editor(df, num_rows="dynamic")
 
     # PDF-generator functie
@@ -59,51 +60,49 @@ def create_pdf(df: pd.DataFrame) -> bytes:
 
     # Header row
     pdf.set_fill_color(200,200,200)
-    pdf.cell(IMAGE_WIDTH, 8, "Foto", border=1, fill=True)
-    pdf.cell(CODE_WIDTH, 8, "CS CODE", border=1, fill=True)
-    pdf.cell(DESC_WIDTH, 8, "Description", border=1, fill=True)
+    pdf.cell(IMAGE_WIDTH, 8, "Foto", border=1, fill=True, align='C')
+    pdf.cell(CODE_WIDTH, 8, "CS CODE", border=1, fill=True, align='C')
+    pdf.cell(DESC_WIDTH, 8, "Description", border=1, fill=True, align='C')
     pdf.ln()
 
     # Rows
     for _, row in df.iterrows():
-        x_before = pdf.get_x()
-        y_before = pdf.get_y()
+        x0, y0 = MARGIN, pdf.get_y()
+        pdf.set_x(x0)
 
-        # Haal velden op via .get
+        # Draw image placeholder
         b64 = row.get("Base64", "") or ""
         url = row.get("FotoURL", "") or ""
-        code = row.get("CS CODE", "")
-        desc = row.get("DISCRIPTION", "")
-
-        # Kies Base64 boven FotoURL als beschikbaar
+        # reserve cell
+        pdf.rect(x0, y0, IMAGE_WIDTH, IMAGE_HEIGHT)
         if b64:
             try:
                 data = b64.split(",")[-1]
                 img_bytes = base64.b64decode(data)
-                pdf.image(BytesIO(img_bytes), x=x_before, y=y_before, w=IMAGE_WIDTH)
-            except Exception:
-                pdf.cell(IMAGE_WIDTH, 30, "[Invalid Base64]", border=1)
+                pdf.image(BytesIO(img_bytes), x=x0+1, y=y0+1, w=IMAGE_WIDTH-2)
+            except:
+                pass
         elif isinstance(url, str) and url.startswith("http"):
             try:
                 resp = requests.get(url)
                 resp.raise_for_status()
-                pdf.image(BytesIO(resp.content), x=x_before, y=y_before, w=IMAGE_WIDTH)
-            except Exception:
-                pdf.cell(IMAGE_WIDTH, 30, "[Foto laad fout]", border=1)
-        else:
-            pdf.cell(IMAGE_WIDTH, 30, "", border=1)
+                pdf.image(BytesIO(resp.content), x=x0+1, y=y0+1, w=IMAGE_WIDTH-2)
+            except:
+                pass
 
         # CS CODE
-        pdf.set_xy(x_before + IMAGE_WIDTH, y_before)
-        pdf.multi_cell(CODE_WIDTH, 10, str(code), border=1)
+        pdf.set_xy(x0 + IMAGE_WIDTH, y0)
+        pdf.multi_cell(CODE_WIDTH, 6, str(row.get("CS CODE", "")), border=1)
 
         # Description
-        pdf.set_xy(x_before + IMAGE_WIDTH + CODE_WIDTH, y_before)
-        pdf.multi_cell(DESC_WIDTH, 10, str(desc), border=1)
+        # align top of description cell to same y0
+        pdf.set_xy(x0 + IMAGE_WIDTH + CODE_WIDTH, y0)
+        pdf.multi_cell(DESC_WIDTH, 6, str(row.get("Description", "")), border=1)
 
-        # Cursor naar volgende rij
-        new_y = pdf.get_y()
-        pdf.set_xy(MARGIN, new_y)
+        # move to next row (max of image height and cell heights)
+        row_bottom = max(pdf.get_y(), y0 + IMAGE_HEIGHT)
+        pdf.set_y(row_bottom + ROW_SPACING)
+        pdf.set_x(x0)
 
     # Output
     out = pdf.output(dest='S')
